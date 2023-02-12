@@ -2,56 +2,91 @@ SIZE_X = 8
 SIZE_Y = 8
 
 def tick args
-
+  
   # build grid
   args.state.squares ||= []
-  if args.state.tick_count.idiv(4) > args.state.squares.count && args.state.squares.count < (SIZE_X * SIZE_Y)
+  if args.state.tick_count.idiv(2) > args.state.squares.count && args.state.squares.count < (SIZE_X * SIZE_Y)
     args.state.squares << Square.new(args.state.squares.count.mod(SIZE_X),args.state.squares.count.idiv(SIZE_Y))
   end
   
-  # render grid
-  args.state.squares.each do |squares|
-    click = args.state.last_mouse_click
-    squares.clicked(squares.did_i_click_you?(click.point.x, click.point.y))
-  end
-
-
-  tick_instructions args, "Sample app shows how mouse events are registered and how to measure elapsed time."
-  x = 660
-
-  args.outputs.labels << small_label(args, x, 11, "Mouse input: args.inputs.mouse")
-
   if args.inputs.mouse.click
     args.state.last_mouse_click = args.inputs.mouse.click
   end
 
-  if args.state.last_mouse_click
+  # render grid
+  args.state.squares.each do |square|
     click = args.state.last_mouse_click
-    args.outputs.labels << small_label(args, x, 12, "Mouse click happened at: #{click.created_at}")
-
-    args.outputs.labels << small_label(args, x, 14, "Mouse click location: #{click.point.x}, #{click.point.y}")
-  else
-    args.outputs.labels << small_label(args, x, 12, "Mouse click has not occurred yet.")
-    args.outputs.labels << small_label(args, x, 13, "Please click mouse.")
+    if square.did_i_click_you?(click.point.x, click.point.y)
+      if square.piece
+        args.state.selected_square = square
+      elsif(args.state.selected_square.move_piece(square))
+        args.state.selected_square = nil
+      else
+        args.state.selected_square = nil  
+      end
+    end
   end
-
   
   if args.inputs.keyboard.key_held.shift
-    args.outputs.labels << [100, 68, "D? #{args.state.squares.first.inspect}?", -2, 0, 0, 0, 0]
+    args.outputs.labels << [100, 68, "D? #{args.state.squares.count}?", -2, 0, 0, 0, 0]
   end
 
   # render grid
   args.state.squares.each do |squares|
-    squares.render(args.outputs.solids )
+    squares.render(args.outputs )
+  end
+end
+
+class King
+  def initialize(team)
+    @team = team
+  end
+
+  def to_s
+    "K"
+  end
+
+  def r
+    @team == 0 ? 217 : 33
+  end
+
+  def g
+    @team == 0 ? 217 : 33
+  end
+
+  def b
+    @team == 0 ? 217 : 33
+  end
+
+  def valid_move?(current_square, new_square)
+    (current_square.x - new_square.x).abs < 2 and (current_square.y - new_square.y).abs < 2 
   end
 end
 
 class Square
+  attr_accessor :piece
+  attr_reader :x, :y
   TILE_SIZE = 79
   SPACING = 3
   def initialize(x, y)
     @x = x
     @y = y
+
+    if @x == SIZE_X/2
+      if(@y == 0)
+        @piece = King.new(0)
+      end
+      if(@y == SIZE_Y - 1)
+        @piece = King.new(1)
+      end
+    end
+  end
+
+  def move_piece(square)
+    return unless piece.valid_move?(self, square)
+    
+    square.piece = piece
+    @piece = nil        
   end
 
   def color
@@ -59,45 +94,22 @@ class Square
   end
 
   def did_i_click_you?(x, y)
-    (x > @x*(TILE_SIZE + SPACING) && x < @x*(TILE_SIZE + SPACING) + TILE_SIZE) && (y > @y*(TILE_SIZE + SPACING) && y < @y*(TILE_SIZE + SPACING) + TILE_SIZE)
+    @clicked = (x > x_begin && x < x_begin + TILE_SIZE) && (y > y_begin && y < y_begin + TILE_SIZE)
   end
 
-  def clicked(b)
-    @clicked = b
+  def render(outputs)
+    outputs.solids << 
+      [x_begin, y_begin , TILE_SIZE, TILE_SIZE, color, @clicked ? 127 : color, color ]
+    if @piece
+      outputs.labels << [x_begin + TILE_SIZE*2/7 + 0 , y_begin + TILE_SIZE*7/8 + 0, @piece.to_s,  (TILE_SIZE - 28)/2, 0, @piece.r , @piece.g, @piece.b ]
+    end
   end
 
-  def render(solids)
-    solids << [
-      [@x*(TILE_SIZE + SPACING), @y*(TILE_SIZE + SPACING), TILE_SIZE, TILE_SIZE, color, @clicked ? 127 : color, color ]
-    ]
+  def x_begin
+    @x*(TILE_SIZE + SPACING)
   end
 
-  def serialize
-    { }
+  def y_begin
+    @y*(TILE_SIZE + SPACING)
   end
-end
-
-def small_label args, x, row, message
-  # This method effectively combines the row_to_px and small_font methods
-  # It changes the given row value to a DragonRuby pixel value
-  # and adds the customization parameters
-  { x: x, y: row_to_px(args, row), text: message, alignment_enum: -2 }
-end
-
-def row_to_px args, row_number
-  args.grid.top.shift_down(5).shift_down(20 * row_number)
-end
-
-def tick_instructions args, text, y = 715
-  return if args.state.key_event_occurred
-  if args.inputs.mouse.click ||
-     args.inputs.keyboard.directional_vector ||
-     args.inputs.keyboard.key_down.enter ||
-     args.inputs.keyboard.key_down.escape
-    args.state.key_event_occurred = true
-  end
-
-  args.outputs.debug << { x: 0,   y: y - 50, w: 1280, h: 60 }.solid!
-  args.outputs.debug << { x: 640, y: y, text: text, size_enum: 1, alignment_enum: 1, r: 255, g: 255, b: 255 }.label!
-  args.outputs.debug << { x: 640, y: y - 25, text: "(click to dismiss instructions)", size_enum: -2, alignment_enum: 1, r: 255, g: 255, b: 255 }.label!
 end
