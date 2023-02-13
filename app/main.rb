@@ -13,13 +13,17 @@ def tick args
     args.state.last_mouse_click = args.inputs.mouse.click
   end
 
+  args.state.turn ||= 0
+  args.outputs.labels << [100, (SIZE_Y * (Square::TILE_SIZE + Square::SPACING)) + 18, turn_label_centent(args.state.turn), -2, 0, 0, 0, 0]
+
   # render grid
   args.state.squares.each do |square|
     click = args.state.last_mouse_click
     if square.did_i_click_you?(click.point.x, click.point.y)
       if square.piece
         args.state.selected_square = square
-      elsif(args.state.selected_square.move_piece(square))
+      elsif(args.state.selected_square.move_piece(square, args.state.turn))
+        args.state.turn += 1
         args.state.selected_square = nil
       else
         args.state.selected_square = nil  
@@ -37,7 +41,12 @@ def tick args
   end
 end
 
+def turn_label_centent(turn)
+  "Turn: #{turn}, #{turn.mod(2) == 0 ? "White" : "Black"}"
+end
+
 class King
+  attr_reader :team
   def initialize(team)
     @team = team
   end
@@ -82,15 +91,29 @@ class Square
     end
   end
 
-  def move_piece(square)
+  def move_piece(square, turn)
+    return unless turn.mod(2) == piece.team
     return unless piece.valid_move?(self, square)
     
     square.piece = piece
-    @piece = nil        
+    @piece = nil
+    true
   end
 
   def color
-    ((@x + @y) - SIZE_X).mod(2)*255
+    if ((@x + @y) - SIZE_X).mod(2) == 0
+      [110, 170, 105]
+    else
+      [247, 255, 247]
+    end
+  end
+
+  def color_clicked
+    if ((@x + @y) - SIZE_X).mod(2) == 0
+      [255, 111, 63]
+    else
+      [255, 141, 93]
+    end
   end
 
   def did_i_click_you?(x, y)
@@ -99,7 +122,7 @@ class Square
 
   def render(outputs)
     outputs.solids << 
-      [x_begin, y_begin , TILE_SIZE, TILE_SIZE, color, @clicked ? 127 : color, color ]
+      [x_begin, y_begin , TILE_SIZE, TILE_SIZE, @clicked ? color_clicked[0] : color[0],  @clicked ? color_clicked[1] : color[1] , @clicked ? color_clicked[2] : color[2] ]
     if @piece
       outputs.labels << [x_begin + TILE_SIZE*2/7 + 0 , y_begin + TILE_SIZE*7/8 + 0, @piece.to_s,  (TILE_SIZE - 28)/2, 0, @piece.r , @piece.g, @piece.b ]
     end
