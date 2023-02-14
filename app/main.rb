@@ -195,6 +195,15 @@ class Square
     elsif @y == SIZE_Y - 2
       @piece = Pawn.new(board, 1)
     end
+
+    if @x == SIZE_X - 1 or @x == 0
+      if(@y == 0)
+        @piece = Rook.new(board, 0)
+      end
+      if(@y == SIZE_Y - 1)
+        @piece = Rook.new(board, 1)
+      end
+    end
   end
 
   def empty?
@@ -269,11 +278,13 @@ class Square
   end
 end
 
-class Numeric
-  Alph = ("a".."z").to_a
-  def alph
-    s, q = "", self
-    (q, r = (q - 1).divmod(26)); s.prepend(Alph[r]) until q.zero?
-    s
+
+class Rook < BasePiece
+  def to_s
+    "R"
+  end
+
+  def valid_move?(current_square, new_square)
+    current_square.x == new_square.x or current_square.y == new_square.y
   end
 end
