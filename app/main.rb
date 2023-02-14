@@ -4,24 +4,23 @@ SIZE_Y = 7
 def tick args
   
   args.state.board ||= Board.new(args)
-  if args.inputs.mouse.click
-    args.state.last_mouse_click = args.inputs.mouse.click
-  end
+
 
   args.state.turn ||= 0
   args.outputs.labels << [100, (SIZE_Y * (Square::tile_size + Square::SPACING)) + 18, turn_label_centent(args.state.turn), -2, 0, 0, 0, 0]
 
-  # render grid
-  args.state.board.squares.each do |square|
-    click = args.state.last_mouse_click
-    if square.did_i_click_you?(click.point.x, click.point.y)
-      if(args.state.selected_square&.move_piece(square, args.state.turn))
-        args.state.turn += 1
-        args.state.selected_square = nil
-      elsif square.piece
-        args.state.selected_square = square
-      else
-        args.state.selected_square = nil  
+  if args.inputs.mouse.click
+    click = args.inputs.mouse.click
+    args.state.board.squares.each do |square|
+      if square.did_i_click_you?(click.point.x, click.point.y)
+        if(args.state.selected_square&.move_piece(square, args.state.turn))
+          args.state.turn += 1
+          args.state.selected_square = nil
+        elsif square.piece
+          args.state.selected_square = square
+        else
+          args.state.selected_square = nil  
+        end
       end
     end
   end
@@ -77,8 +76,26 @@ class Board
 
   def kill(x, y)
     puts "kill #{x} , #{y}"
-    @squares[SIZE_X * y + x].piece = nil
+    square(x, y).piece = nil
   end
+
+  def clear_path?(current_square, new_square)
+    puts "clear_path current_square.x #{current_square.x}"
+    puts "clear_path new_square.x #{new_square.x}"
+    (current_square.x.upto(new_square.x).drop(1).reverse.drop(1) + current_square.x.downto(new_square.x).drop(1).reverse.drop(1)).each do |x|
+      return false unless square(x, current_square.y).piece.nil?
+    end
+    (current_square.y.upto(new_square.y).drop(1).reverse.drop(1) + current_square.y.downto(new_square.y).drop(1).reverse.drop(1)).each do |y|
+      return false unless square(current_square.x, y).piece.nil?
+    end
+  end
+  
+  private
+
+  def square(x, y)
+    @squares[SIZE_X * y + x]
+  end
+
 end
 
 class Move
@@ -132,6 +149,8 @@ class Pawn < BasePiece
   end
 
   def valid_move?(current_square, new_square)
+    return unless board.clear_path?(current_square, new_square)
+
     if(team == 0)
       (current_square.y + 1 == new_square.y and current_square.x == new_square.x) or
       (current_square.y + 2 == new_square.y and current_square.x == new_square.x and move_count == 0)
@@ -221,7 +240,7 @@ class Square
 
   def move_piece(square, turn)
     return unless turn.mod(2) == piece.team
-    return unless (piece.valid_move?(self, square) && square.empty?) || piece.valid_kill?(self, square)
+    return unless (piece.valid_move?(self, square) && square.empty?) || piece.valid_kill?(self, square) 
     
     move = Move.new
     move.piece = piece.class
@@ -285,6 +304,8 @@ class Rook < BasePiece
   end
 
   def valid_move?(current_square, new_square)
+    return unless board.clear_path?(current_square, new_square)
+
     current_square.x == new_square.x or current_square.y == new_square.y
   end
 end
