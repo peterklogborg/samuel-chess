@@ -82,11 +82,23 @@ class Board
   def clear_path?(current_square, new_square)
     puts "clear_path current_square.x #{current_square.x}"
     puts "clear_path new_square.x #{new_square.x}"
-    (current_square.x.upto(new_square.x).drop(1).reverse.drop(1) + current_square.x.downto(new_square.x).drop(1).reverse.drop(1)).each do |x|
-      return false unless square(x, current_square.y).piece.nil?
-    end
-    (current_square.y.upto(new_square.y).drop(1).reverse.drop(1) + current_square.y.downto(new_square.y).drop(1).reverse.drop(1)).each do |y|
-      return false unless square(current_square.x, y).piece.nil?
+    if(current_square.y == new_square.y)
+      (current_square.x.upto(new_square.x).drop(1).reverse.drop(1) + current_square.x.downto(new_square.x).drop(1).reverse.drop(1)).each do |x|
+        return false unless square(x, current_square.y).piece.nil?
+      end
+    elsif(current_square.x == new_square.x)
+      (current_square.y.upto(new_square.y).drop(1).reverse.drop(1) + current_square.y.downto(new_square.y).drop(1).reverse.drop(1)).each do |y|
+        return false unless square(current_square.x, y).piece.nil?
+      end
+    else
+      return true if (new_square.x - current_square.x).abs < 2
+      
+      x_step = new_square.x - current_square.x > 0 ? 1 : -1
+      y_step = new_square.y - current_square.y > 0 ? 1 : -1
+      ((new_square.x - current_square.x).abs - 1).times do |step|
+        return false if square(current_square.x + x_step * (step + 1), current_square.y + y_step * (step + 1)).piece
+      end
+      true
     end
   end
   
@@ -361,7 +373,7 @@ class Bishop < BasePiece
   end
 
   def valid_move?(current_square, new_square)
-    # return unless board.clear_path?(current_square, new_square)
+    return unless board.clear_path?(current_square, new_square)
 
     (current_square.x - new_square.x == current_square.y - new_square.y) or
     (current_square.x + current_square.y == new_square.x + new_square.y)
@@ -374,7 +386,7 @@ class Queen < BasePiece
   end
 
   def valid_move?(current_square, new_square)
-    # return unless board.clear_path?(current_square, new_square)
+    return unless board.clear_path?(current_square, new_square)
 
     current_square.x == new_square.x or current_square.y == new_square.y or
     (current_square.x - new_square.x == current_square.y - new_square.y) or
