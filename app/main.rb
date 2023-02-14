@@ -200,19 +200,29 @@ class Square
     @x = x
     @y = y
 
-    if @x == SIZE_X.idiv(2)
-      if(@y == 0)
-        @piece = King.new(board, 0)
-      end
-      if(@y == SIZE_Y - 1)
-        @piece = King.new(board, 1)
+    if(SIZE_Y > 3)
+      if(@y == 1)
+        @piece = Pawn.new(board, 0)
+      elsif @y == SIZE_Y - 2
+        @piece = Pawn.new(board, 1)
       end
     end
 
-    if(@y == 1)
-      @piece = Pawn.new(board, 0)
-    elsif @y == SIZE_Y - 2
-      @piece = Pawn.new(board, 1)
+    if(@y == 0)
+      @piece = Knight.new(board, 0)
+    end
+    if(@y == SIZE_Y - 1)
+      @piece = Knight.new(board, 1)
+    end
+
+
+    if @x == SIZE_X.idiv(2) + 1 or @x == SIZE_X - SIZE_X.idiv(2) - 2
+      if(@y == 0)
+        @piece = Bishop.new(board, 0)
+      end
+      if(@y == SIZE_Y - 1)
+        @piece = Bishop.new(board, 1)
+      end
     end
 
     if @x == SIZE_X - 1 or @x == 0
@@ -224,12 +234,21 @@ class Square
       end
     end
 
-    if @x == SIZE_X - 2 or @x == 1
+    if @x == SIZE_X/2 - 1
       if(@y == 0)
-        @piece = Knight.new(board, 0)
+        @piece = Queen.new(board, 0)
       end
       if(@y == SIZE_Y - 1)
-        @piece = Knight.new(board, 1)
+        @piece = Queen.new(board, 1)
+      end
+    end
+
+    if @x == SIZE_X.idiv(2)
+      if(@y == 0)
+        @piece = King.new(board, 0)
+      end
+      if(@y == SIZE_Y - 1)
+        @piece = King.new(board, 1)
       end
     end
   end
@@ -333,5 +352,32 @@ class Knight < BasePiece
     (current_square.x + 1 == new_square.x and current_square.y - 2 == new_square.y) or
     (current_square.x - 1 == new_square.x and current_square.y + 2 == new_square.y) or
     (current_square.x - 1 == new_square.x and current_square.y - 2 == new_square.y)
+  end
+end
+
+class Bishop < BasePiece
+  def to_s
+    "B"
+  end
+
+  def valid_move?(current_square, new_square)
+    # return unless board.clear_path?(current_square, new_square)
+
+    (current_square.x - new_square.x == current_square.y - new_square.y) or
+    (current_square.x + current_square.y == new_square.x + new_square.y)
+  end
+end
+
+class Queen < BasePiece
+  def to_s
+    "Q"
+  end
+
+  def valid_move?(current_square, new_square)
+    # return unless board.clear_path?(current_square, new_square)
+
+    current_square.x == new_square.x or current_square.y == new_square.y or
+    (current_square.x - new_square.x == current_square.y - new_square.y) or
+    (current_square.x + current_square.y == new_square.x + new_square.y)
   end
 end
