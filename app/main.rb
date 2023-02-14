@@ -1,5 +1,5 @@
 SIZE_X = 8
-SIZE_Y = 7
+SIZE_Y = 8
 
 def tick args
   
@@ -223,6 +223,15 @@ class Square
         @piece = Rook.new(board, 1)
       end
     end
+
+    if @x == SIZE_X - 2 or @x == 1
+      if(@y == 0)
+        @piece = Knight.new(board, 0)
+      end
+      if(@y == SIZE_Y - 1)
+        @piece = Knight.new(board, 1)
+      end
+    end
   end
 
   def empty?
@@ -307,5 +316,22 @@ class Rook < BasePiece
     return unless board.clear_path?(current_square, new_square)
 
     current_square.x == new_square.x or current_square.y == new_square.y
+  end
+end
+
+class Knight < BasePiece
+  def to_s
+    "N"
+  end
+
+  def valid_move?(current_square, new_square)
+    (current_square.x + 2 == new_square.x and current_square.y + 1 == new_square.y) or
+    (current_square.x + 2 == new_square.x and current_square.y - 1 == new_square.y) or
+    (current_square.x - 2 == new_square.x and current_square.y + 1 == new_square.y) or
+    (current_square.x - 2 == new_square.x and current_square.y - 1 == new_square.y) or
+    (current_square.x + 1 == new_square.x and current_square.y + 2 == new_square.y) or
+    (current_square.x + 1 == new_square.x and current_square.y - 2 == new_square.y) or
+    (current_square.x - 1 == new_square.x and current_square.y + 2 == new_square.y) or
+    (current_square.x - 1 == new_square.x and current_square.y - 2 == new_square.y)
   end
 end
