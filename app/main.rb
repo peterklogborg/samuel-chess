@@ -157,7 +157,7 @@ class BasePiece
   end
 
   def valid_kill?(current_square, new_square)
-    new_square.enemy?(team) && tread?(current_square, new_squar)
+    new_square.enemy?(team) && tread?(current_square, new_square)
   end
 
   def may_move_into_protected_square?
