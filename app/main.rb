@@ -8,6 +8,7 @@ def tick args
 
   args.state.turn ||= 0
   args.outputs.labels << [100, (SIZE_Y * (Square::tile_size + Square::SPACING)) + 18, turn_label_centent(args.state.turn), -2, 0, 0, 0, 0]
+  args.outputs.labels << [300, (SIZE_Y * (Square::tile_size + Square::SPACING)) + 18, args.state.board.message, -2, 0, 0, 0, 0]
 
   if args.inputs.mouse.click
     click = args.inputs.mouse.click
@@ -63,11 +64,13 @@ end
 
 class Board
   attr_accessor :squares, :moves
+  attr_reader :message
 
   # build grid
   def initialize(args)
     @squares = []
     @moves = []
+    @message = ""
 
     while @squares.count < (SIZE_X * SIZE_Y)
       @squares << Square.new(self, squares.count.mod(SIZE_X), @squares.count.idiv(SIZE_X))
@@ -80,8 +83,6 @@ class Board
   end
 
   def clear_path?(current_square, new_square)
-    puts "clear_path current_square.x #{current_square.x}"
-    puts "clear_path new_square.x #{new_square.x}"
     if(current_square.y == new_square.y)
       (current_square.x.upto(new_square.x).drop(1).reverse.drop(1) + current_square.x.downto(new_square.x).drop(1).reverse.drop(1)).each do |x|
         return false unless square(x, current_square.y).piece.nil?
@@ -100,6 +101,21 @@ class Board
       end
       true
     end
+  end
+
+  def moving_into_check?(current_square, new_square)
+    if(!current_square.piece.may_move_into_protected_square?)
+      @squares.each do |square|
+        if square.piece && square.piece.team != current_square.piece.team
+          if square.piece.tread?(square, new_square)
+            @message = "#{square.piece} tread #{team_to_name(current_square.piece.team)} #{current_square.piece.class.to_s}moved into check"
+            return true
+          end
+        end
+      end
+    end
+
+    false
   end
   
   private
@@ -136,12 +152,12 @@ class BasePiece
     @team == 0 ? 217 : 33
   end
 
-  def valid_kill?(current_square, new_square)
-    new_square.enemy?(team) && valid_move?(current_square, new_square)
+  def tread?(current_square, new_square)
+    valid_move?(current_square, new_square)
   end
 
-  def self.to_s
-    "|#{self.class}|"
+  def valid_kill?(current_square, new_square)
+    new_square.enemy?(team) && tread?(current_square, new_squar)
   end
 end
 
@@ -152,6 +168,10 @@ class King < BasePiece
 
   def valid_move?(current_square, new_square)
     (current_square.x - new_square.x).abs < 2 and (current_square.y - new_square.y).abs < 2 
+  end
+
+  def may_move_into_protected_square?
+    false
   end
 end
 
@@ -172,12 +192,16 @@ class Pawn < BasePiece
     end
   end
 
-  def valid_kill?(current_square, new_square)
+  def tread?(current_square, new_square)
     if(team == 0)
-      (current_square.x - new_square.x).abs == 1 and (current_square.y + 1 == new_square.y) and (new_square.enemy?(team) or in_passing?(current_square, new_square))
+      (current_square.x - new_square.x).abs == 1 and (current_square.y + 1 == new_square.y)
     elsif(team == 1)
-      (current_square.x - new_square.x).abs == 1 and (current_square.y - 1 == new_square.y) and (new_square.enemy?(team) or in_passing?(current_square, new_square))
+      (current_square.x - new_square.x).abs == 1 and (current_square.y - 1 == new_square.y)
     end
+  end
+
+  def valid_kill?(current_square, new_square)
+    tread?(current_square, new_square) and (new_square.enemy?(team) or in_passing?(current_square, new_square))
   end
 
   def in_passing?(current_square, new_square)
@@ -199,6 +223,10 @@ class Pawn < BasePiece
         end
       end
     end
+  end
+
+  def may_move_into_protected_square?
+    true
   end
 end
 
@@ -280,7 +308,8 @@ class Square
 
   def move_piece(square, turn)
     return unless turn.mod(2) == piece.team
-    return unless (piece.valid_move?(self, square) && square.empty?) || piece.valid_kill?(self, square) 
+    return if @board.moving_into_check?(self, square)
+    return unless (piece.valid_move?(self, square) && square.empty?) || piece.valid_kill?(self, square)
     
     move = Move.new
     move.piece = piece.class
