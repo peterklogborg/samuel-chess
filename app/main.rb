@@ -3,19 +3,19 @@ SIZE_Y = 8
 
 def tick args
   
-  args.state.board ||= Board.new(args)
+  args.state.board ||= Board.new()
 
-
-  args.state.turn ||= 0
-  args.outputs.labels << [100, (SIZE_Y * (Square::tile_size + Square::SPACING)) + 18, turn_label_centent(args.state.turn), -2, 0, 0, 0, 0]
+  args.outputs.labels << [0, (SIZE_Y * (Square::tile_size + Square::SPACING)) + 18, "check #{team_to_name(0)}", -2, 0, 0, 0, 0] if args.state.board.in_check?(0)
+  args.outputs.labels << [0, (SIZE_Y * (Square::tile_size + Square::SPACING)) + 18, "check #{team_to_name(1)}", -2, 0, 0, 0, 0] if args.state.board.in_check?(1)
+  args.outputs.labels << [100, (SIZE_Y * (Square::tile_size + Square::SPACING)) + 18, turn_label_centent(args.state.board), -2, 0, 0, 0, 0]
   args.outputs.labels << [300, (SIZE_Y * (Square::tile_size + Square::SPACING)) + 18, args.state.board.message, -2, 0, 0, 0, 0]
 
+    # finished
   if args.inputs.mouse.click
     click = args.inputs.mouse.click
     args.state.board.squares.each do |square|
       if square.did_i_click_you?(click.point.x, click.point.y)
-        if(args.state.selected_square&.move_piece(square, args.state.turn))
-          args.state.turn += 1
+        if(args.state.selected_square&.move_piece(square))
           args.state.selected_square = nil
         elsif square.piece
           args.state.selected_square = square
@@ -25,6 +25,9 @@ def tick args
       end
     end
   end
+
+
+  # args.outputs.labels << [300, (SIZE_Y/2* (Square::tile_size + Square::SPACING)), "winner #{args.state.winner}", -2, 0, 0, 0, 0] if args.state.winner 
   
   if args.inputs.keyboard.key_held.shift
     args.outputs.labels << [100, 68, "D? #{args.state.board.squares.count}?", -2, 0, 0, 0, 0]
@@ -46,8 +49,8 @@ def log(move)
   index_to_chessletter(move.end_x) + index_to_chess_number(move.end_y) #{move.killed_piece_x} #{move.killed_piece_y} #{move.piece_team} #{move.killed_piece_team}"
 end
 
-def turn_label_centent(turn)
-  "Turn: #{turn}, #{turn.mod(2) == 0 ? "White" : "Black"}"
+def turn_label_centent(board)
+  "Turn: #{board.turn}, #{board.team_turn == 0 ? "White" : "Black"}"
 end
 
 def index_to_chessletter(i)
@@ -63,14 +66,16 @@ def team_to_name(team)
 end
 
 class Board
-  attr_accessor :squares, :moves
-  attr_reader :message
+  attr_accessor :squares, :message
+  attr_reader :moves
+  attr_accessor :turn
 
   # build grid
-  def initialize(args)
+  def initialize()
     @squares = []
     @moves = []
     @message = ""
+    @turn = 0
 
     while @squares.count < (SIZE_X * SIZE_Y)
       @squares << Square.new(self, squares.count.mod(SIZE_X), @squares.count.idiv(SIZE_X))
@@ -104,26 +109,79 @@ class Board
   end
 
   def moving_into_check?(current_square, new_square)
+    enemy_squares = @squares.select{|s| s.piece && s.piece.team != current_square.piece.team}
     if(!current_square.piece.may_move_into_protected_square?)
-      @squares.each do |square|
-        if square.piece && square.piece.team != current_square.piece.team
-          if square.piece.tread?(square, new_square)
-            @message = "#{square.piece} tread #{team_to_name(current_square.piece.team)} #{current_square.piece.class.to_s}moved into check"
-            return true
-          end
+      enemy_squares.each do |enemy_square|
+        if enemy_square.piece.tread?(enemy_square, new_square)
+          @message = "#{enemy_square.piece} tread #{team_to_name(current_square.piece.team)} #{current_square.piece.class.to_s}moved into check"
+          return true
         end
       end
+    end
+    enemy_squares.each do |enemy_square|
+      return true if enemy_square.piece.tread?(enemy_square, king_square(current_square.piece.team))
     end
 
     false
   end
-  
-  private
 
-  def square(x, y)
-    @squares[SIZE_X * y + x]
+  def other_team_in_check?
+    
+    king_square(current_square.piece.team)
   end
 
+  def team_turn
+    turn.mod(2)
+  end
+
+  def not_team_turn
+    (turn+1).mod(2)
+  end
+
+  def to_s
+     "#{team_turn} #{squares.map{|s| "#{s.piece&.team}#{s.piece&.to_s} "}.each_slice(SIZE_X).to_a} #{in_check?(0)} #{in_check?(1)}"
+  end
+
+  def in_check?(team)
+    enemy_squares = squares.select{|s| s.piece && s.piece.team != (team)}
+ 
+    puts "king_square #{king_square(team).x} #{king_square(team).y}"
+    enemy_squares.each do |enemy_square|
+      if enemy_square.piece.tread?(enemy_square, king_square(team))        
+        return true
+      end
+    end
+    
+    false
+  end
+
+  private 
+  def square(x, y)
+    squares[SIZE_X * y + x]
+  end
+
+  def king_square(team)
+    squares.select{|s| s.piece && s.piece.team == team && s.piece.class == King}.first
+  end
+
+  def will_this_move_lead_to_in_check_and_not_your_turn?(current_square, new_square)
+    future_board = Board.new()
+    future_board.squares.each_with_index do |square, index|
+      square.piece = squares[index].piece&.dup
+      future_board.turn = turn
+    end
+    c = future_board.square(current_square.x, current_square.y)
+    n = future_board.square(new_square.x, new_square.y)
+
+    c.move_piece_yolo(n)
+
+    if future_board.in_check?(future_board.not_team_turn)
+      @message = "Not a valid move, sorry );"
+      return true
+    end
+    
+    false
+  end
 end
 
 class Move
@@ -134,10 +192,9 @@ end
 class BasePiece
   attr_reader :team, :board
   attr_accessor :move_count
-  def initialize(board, team)
+  def initialize(team)
     @move_count = 0
     @team = team
-    @board = board
   end
 
   def r
@@ -185,7 +242,7 @@ class Pawn < BasePiece
   end
 
   def valid_move?(current_square, new_square)
-    return unless board.clear_path?(current_square, new_square)
+    return unless current_square.board.clear_path?(current_square, new_square)
 
     if(team == 0)
       (current_square.y + 1 == new_square.y and current_square.x == new_square.x) or
@@ -209,6 +266,7 @@ class Pawn < BasePiece
   end
 
   def in_passing?(current_square, new_square)
+    board = current_square.board
     last_move = board.moves.last
     return unless board.moves.last.piece.to_s == Pawn.to_s
 
@@ -233,9 +291,10 @@ end
 
 class Square
   attr_accessor :piece
-  attr_reader :x, :y
+  attr_reader :x, :y, :board
 
   SPACING = 3
+
   def initialize(board, x, y)
     @board = board
     @x = x
@@ -243,53 +302,53 @@ class Square
 
     if(SIZE_Y > 3)
       if(@y == 1)
-        @piece = Pawn.new(board, 0)
+        @piece = Pawn.new(0)
       elsif @y == SIZE_Y - 2
-        @piece = Pawn.new(board, 1)
+        @piece = Pawn.new(1)
       end
     end
 
     if(@y == 0)
-      @piece = Knight.new(board, 0)
+      @piece = Knight.new(0)
     end
     if(@y == SIZE_Y - 1)
-      @piece = Knight.new(board, 1)
+      @piece = Knight.new(1)
     end
 
 
     if @x == SIZE_X.idiv(2) + 1 or @x == SIZE_X - SIZE_X.idiv(2) - 2
       if(@y == 0)
-        @piece = Bishop.new(board, 0)
+        @piece = Bishop.new(0)
       end
       if(@y == SIZE_Y - 1)
-        @piece = Bishop.new(board, 1)
+        @piece = Bishop.new(1)
       end
     end
 
     if @x == SIZE_X - 1 or @x == 0
       if(@y == 0)
-        @piece = Rook.new(board, 0)
+        @piece = Rook.new(0)
       end
       if(@y == SIZE_Y - 1)
-        @piece = Rook.new(board, 1)
+        @piece = Rook.new(1)
       end
     end
 
     if @x == SIZE_X/2 - 1
       if(@y == 0)
-        @piece = Queen.new(board, 0)
+        @piece = Queen.new(0)
       end
       if(@y == SIZE_Y - 1)
-        @piece = Queen.new(board, 1)
+        @piece = Queen.new(1)
       end
     end
 
     if @x == SIZE_X.idiv(2)
       if(@y == 0)
-        @piece = King.new(board, 0)
+        @piece = King.new(0)
       end
       if(@y == SIZE_Y - 1)
-        @piece = King.new(board, 1)
+        @piece = King.new(1)
       end
     end
   end
@@ -307,11 +366,15 @@ class Square
     632/SIZE_Y
   end
 
-  def move_piece(square, turn)
-    return unless turn.mod(2) == piece.team
-    return if @board.moving_into_check?(self, square)
+  def move_piece(square)
+    return unless board.team_turn == piece.team
     return unless (piece.valid_move?(self, square) && square.empty?) || piece.valid_kill?(self, square)
-    
+    return if board.will_this_move_lead_to_in_check_and_not_your_turn?(self, square)
+    board.message = ""
+    move_piece_yolo(square)
+  end
+
+  def move_piece_yolo(square)
     move = Move.new
     move.piece = piece.class
     move.piece_team = piece.team
@@ -319,13 +382,13 @@ class Square
     move.start_y = @y
     move.end_x = square.x
     move.end_y = square.y
-    
-    # :killed_piece, :killed_piece_x, :killed_piece_y, :killed_piece_team
 
     @board.moves << move
     square.piece = piece
     
     square.piece.move_count += 1 
+    board.turn += 1
+
     @piece = nil
     true
   end
@@ -374,7 +437,7 @@ class Rook < BasePiece
   end
 
   def valid_move?(current_square, new_square)
-    return unless board.clear_path?(current_square, new_square)
+    return unless current_square.board.clear_path?(current_square, new_square)
 
     current_square.x == new_square.x or current_square.y == new_square.y
   end
@@ -403,7 +466,7 @@ class Bishop < BasePiece
   end
 
   def valid_move?(current_square, new_square)
-    return unless board.clear_path?(current_square, new_square)
+    return unless current_square.board.clear_path?(current_square, new_square)
 
     (current_square.x - new_square.x == current_square.y - new_square.y) or
     (current_square.x + current_square.y == new_square.x + new_square.y)
@@ -416,7 +479,7 @@ class Queen < BasePiece
   end
 
   def valid_move?(current_square, new_square)
-    return unless board.clear_path?(current_square, new_square)
+    return unless current_square.board.clear_path?(current_square, new_square)
 
     current_square.x == new_square.x or current_square.y == new_square.y or
     (current_square.x - new_square.x == current_square.y - new_square.y) or
