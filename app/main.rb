@@ -10,22 +10,36 @@ def tick args
   args.outputs.labels << [100, (SIZE_Y * (Square::tile_size + Square::SPACING)) + 18, turn_label_centent(args.state.board), -2, 0, 0, 0, 0]
   args.outputs.labels << [300, (SIZE_Y * (Square::tile_size + Square::SPACING)) + 18, args.state.board.message, -2, 0, 0, 0, 0]
 
-    # finished
-  if args.inputs.mouse.click
-    click = args.inputs.mouse.click
-    args.state.board.squares.each do |square|
-      if square.did_i_click_you?(click.point.x, click.point.y)
-        if(args.state.selected_square&.move_piece(square))
-          args.state.selected_square = nil
-        elsif square.piece
-          args.state.selected_square = square
-        else
-          args.state.selected_square = nil  
+  if args.state.board.team_turn == 1
+    args.state.ai_will_move_in ||= (args.state.tick_count + rand(23) + 12 ).to_f
+    if args.state.ai_will_move_in < args.state.tick_count
+      team_1_squares = args.state.board.squares.select{|s| s.piece&.team == 1}.shuffle()
+      team_1_squares.each do |team_one_square|
+        args.state.board.squares.shuffle().each do |r|
+          if team_one_square.move_piece(r)
+            break
+          end
         end
       end
     end
   end
-
+  if args.state.board.team_turn == 0
+    args.state.ai_will_move_in = nil
+    if args.inputs.mouse.click
+      click = args.inputs.mouse.click
+      args.state.board.squares.each do |square|
+        if square.did_i_click_you?(click.point.x, click.point.y)
+          if(args.state.selected_square&.move_piece(square))
+            args.state.selected_square = nil
+          elsif square.piece
+            args.state.selected_square = square
+          else
+            args.state.selected_square = nil  
+          end
+        end
+      end
+    end
+  end
 
   # args.outputs.labels << [300, (SIZE_Y/2* (Square::tile_size + Square::SPACING)), "winner #{args.state.winner}", -2, 0, 0, 0, 0] if args.state.winner 
   
