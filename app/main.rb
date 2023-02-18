@@ -385,6 +385,15 @@ class Square
 
     @board.moves << move
     square.piece = piece
+
+    if piece.class == Pawn
+      if piece.team == 1 and square.y == 0
+        square.piece = Queen.new(1)
+      end
+      if piece.team == 0 and square.y == SIZE_Y - 1
+        square.piece = Queen.new(0)
+      end 
+    end
     
     square.piece.move_count += 1 
     board.turn += 1
