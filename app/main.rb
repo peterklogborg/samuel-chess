@@ -159,6 +159,10 @@ class BasePiece
   def valid_kill?(current_square, new_square)
     new_square.enemy?(team) && tread?(current_square, new_squar)
   end
+
+  def may_move_into_protected_square?
+    true
+  end
 end
 
 class King < BasePiece
@@ -225,9 +229,6 @@ class Pawn < BasePiece
     end
   end
 
-  def may_move_into_protected_square?
-    true
-  end
 end
 
 class Square
