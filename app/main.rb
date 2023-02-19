@@ -112,14 +112,16 @@ class Board
       end
     else
       return true if (new_square.x - current_square.x).abs < 2
+      return true if (new_square.y - current_square.y).abs < 2
       
       x_step = new_square.x - current_square.x > 0 ? 1 : -1
       y_step = new_square.y - current_square.y > 0 ? 1 : -1
       ((new_square.x - current_square.x).abs - 1).times do |step|
+        puts "square #{square(current_square.x + x_step * (step + 1), current_square.y + y_step * (step + 1))}"
         return false if square(current_square.x + x_step * (step + 1), current_square.y + y_step * (step + 1)).piece
       end
-      true
     end
+    true
   end
 
   def moving_into_check?(current_square, new_square)
@@ -158,8 +160,6 @@ class Board
 
   def in_check?(team)
     enemy_squares = squares.select{|s| s.piece && s.piece.team != (team)}
- 
-    puts "king_square #{king_square(team).x} #{king_square(team).y}"
     enemy_squares.each do |enemy_square|
       if enemy_square.piece.tread?(enemy_square, king_square(team))        
         return true
@@ -242,11 +242,15 @@ class King < BasePiece
   end
 
   def valid_move?(current_square, new_square)
-    (current_square.x - new_square.x).abs < 2 and (current_square.y - new_square.y).abs < 2 
+    ((current_square.x - new_square.x).abs < 2 and (current_square.y - new_square.y).abs < 2 ) || castle(current_square, new_square)
   end
 
   def may_move_into_protected_square?
     false
+  end
+
+  def castle(current_square, new_square)
+    move_count == 0 && (current_square.x - new_square.x).abs == 2 && current_square.y == new_square.y
   end
 end
 
