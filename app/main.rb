@@ -169,8 +169,17 @@ class Board
     false
   end
 
+  def rook_starting_square(current_square, new_square)
+    if(current_square.x < new_square.x)
+      current_square.board.square(SIZE_X - 1, current_square.y)
+    else
+      current_square.board.square(0, current_square.y)
+    end
+  end
+
   private 
   def square(x, y)
+    puts "x y #{x} #{y}"
     squares[SIZE_X * y + x]
   end
 
@@ -250,7 +259,10 @@ class King < BasePiece
   end
 
   def castle(current_square, new_square)
-    move_count == 0 && (current_square.x - new_square.x).abs == 2 && current_square.y == new_square.y
+    return false unless move_count == 0 && current_square.y == new_square.y && (current_square.x - new_square.x).abs == 2
+    
+    rook_square = current_square.board.rook_starting_square(current_square, new_square)
+    rook_square.piece.class == Rook && rook_square.piece.team == team && rook_square.piece.move_count == 0 
   end
 end
 
@@ -411,6 +423,13 @@ class Square
       if piece.team == 0 and square.y == SIZE_Y - 1
         square.piece = Queen.new(0)
       end 
+    end
+
+    if piece.class == King
+      if(x - square.x == 2 || square.x - x == 2)
+        board.square((x + square.x).idiv(2), y).piece = board.rook_starting_square(self, square).piece
+        board.rook_starting_square(self, square).piece = nil
+      end
     end
     
     square.piece.move_count += 1 
