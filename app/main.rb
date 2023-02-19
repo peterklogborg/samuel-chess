@@ -5,10 +5,12 @@ def tick args
   
   args.state.board ||= Board.new()
 
-  args.outputs.labels << [0, (SIZE_Y * (Square::tile_size + Square::SPACING)) + 18, "check #{team_to_name(0)}", -2, 0, 0, 0, 0] if args.state.board.in_check?(0)
-  args.outputs.labels << [0, (SIZE_Y * (Square::tile_size + Square::SPACING)) + 18, "check #{team_to_name(1)}", -2, 0, 0, 0, 0] if args.state.board.in_check?(1)
-  args.outputs.labels << [100, (SIZE_Y * (Square::tile_size + Square::SPACING)) + 18, turn_label_centent(args.state.board), -2, 0, 0, 0, 0]
-  args.outputs.labels << [300, (SIZE_Y * (Square::tile_size + Square::SPACING)) + 18, args.state.board.message, -2, 0, 0, 0, 0]
+  args.outputs.labels << [border, border + SIZE_Y * (Square::tile_size + Square::SPACING) + 20, 
+    "Points: #{args.state.board.points(1)}, #{args.state.board.in_check?(1) ? "check #{team_to_name(1)}" : ""} ", -2, 0, 0, 0, 0] 
+  args.outputs.labels << [border,  26, 
+    "Points: #{args.state.board.points(0)}, #{args.state.board.in_check?(0) ? "check #{team_to_name(0)}" : ""}", -2, 0, 0, 0, 0] 
+  args.outputs.labels << [border + SIZE_X * (Square::tile_size + Square::SPACING), SIZE_Y * (Square::tile_size + Square::SPACING) + 18, turn_label_centent(args.state.board), -2, 0, 0, 0, 0]
+  args.outputs.labels << [border + SIZE_X * (Square::tile_size + Square::SPACING), SIZE_Y * (Square::tile_size + Square::SPACING) - 18, args.state.board.message, -2, 0, 0, 0, 0]
 
   if args.state.board.team_turn == 1
     args.state.ai_will_move_in ||= (args.state.tick_count + rand(23) + 12 ).to_f
@@ -16,6 +18,8 @@ def tick args
       team_1_squares = args.state.board.squares.select{|s| s.piece&.team == 1}.shuffle()
       team_1_squares.each do |team_one_square|
         args.state.board.squares.shuffle().each do |r|
+          next unless team_one_square.piece # why is this necessary
+
           if team_one_square.move_piece(r)
             break
           end
@@ -79,6 +83,10 @@ def team_to_name(team)
   (team == 0 ? "White" : "Black")
 end
 
+def border
+  36
+end
+
 class Board
   attr_accessor :squares, :message
   attr_reader :moves
@@ -99,6 +107,10 @@ class Board
   def kill(x, y)
     puts "kill #{x} , #{y}"
     square(x, y).piece = nil
+  end
+
+  def points(team)
+    @squares.select{|s| s.piece && s.piece.team == team}.sum{|square| square.piece.points}
   end
 
   def clear_path?(current_square, new_square)
@@ -216,11 +228,15 @@ end
 
 
 class BasePiece
-  attr_reader :team, :board
+  attr_reader :team
   attr_accessor :move_count
   def initialize(team)
     @move_count = 0
     @team = team
+  end
+
+  def points
+    1
   end
 
   def r
@@ -251,6 +267,10 @@ end
 class King < BasePiece
   def to_s
     "K"
+  end
+
+  def points
+    0
   end
 
   def valid_move?(current_square, new_square)
@@ -473,11 +493,11 @@ class Square
   end
 
   def x_begin
-    @x*(Square.tile_size + SPACING)
+    border + @x*(Square.tile_size + SPACING)
   end
 
   def y_begin
-    @y*(Square.tile_size + SPACING)
+    border + @y*(Square.tile_size + SPACING)
   end
 end
 
