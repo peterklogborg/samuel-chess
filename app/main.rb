@@ -235,10 +235,6 @@ class BasePiece
     @team = team
   end
 
-  def points
-    1
-  end
-
   def r
     @team == 0 ? 217 : 33
   end
@@ -293,7 +289,11 @@ class Pawn < BasePiece
   def to_s
     "P"
   end
-
+  
+  def points
+    1
+  end
+  
   def valid_move?(current_square, new_square)
 
     return unless if(team == 0)
@@ -507,6 +507,10 @@ class Rook < BasePiece
     "R"
   end
 
+  def points
+    5
+  end
+
   def valid_move?(current_square, new_square)
      return unless current_square.x == new_square.x or current_square.y == new_square.y
 
@@ -517,6 +521,10 @@ end
 class Knight < BasePiece
   def to_s
     "N"
+  end
+
+  def points
+    3
   end
 
   def valid_move?(current_square, new_square)
@@ -536,6 +544,10 @@ class Bishop < BasePiece
     "B"
   end
 
+  def points
+    3
+  end
+
   def valid_move?(current_square, new_square)
     return unless (current_square.x - new_square.x == current_square.y - new_square.y) or
     (current_square.x + current_square.y == new_square.x + new_square.y)
@@ -547,6 +559,10 @@ end
 class Queen < BasePiece
   def to_s
     "Q"
+  end
+
+  def points
+    9
   end
 
   def valid_move?(current_square, new_square)
