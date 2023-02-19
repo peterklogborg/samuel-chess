@@ -116,6 +116,9 @@ class Board
       
       x_step = new_square.x - current_square.x > 0 ? 1 : -1
       y_step = new_square.y - current_square.y > 0 ? 1 : -1
+      puts "x_step y_step #{x_step} #{y_step}"
+      puts "current_square #{current_square.x} #{current_square.y}"
+      puts "current_square #{new_square.x} #{new_square.y}"
       ((new_square.x - current_square.x).abs - 1).times do |step|
         puts "square #{square(current_square.x + x_step * (step + 1), current_square.y + y_step * (step + 1))}"
         return false if square(current_square.x + x_step * (step + 1), current_square.y + y_step * (step + 1)).piece
@@ -272,15 +275,16 @@ class Pawn < BasePiece
   end
 
   def valid_move?(current_square, new_square)
-    return unless current_square.board.clear_path?(current_square, new_square)
 
-    if(team == 0)
+    return unless if(team == 0)
       (current_square.y + 1 == new_square.y and current_square.x == new_square.x) or
       (current_square.y + 2 == new_square.y and current_square.x == new_square.x and move_count == 0)
     elsif(team == 1)
       (current_square.y - 1 == new_square.y and current_square.x == new_square.x) or
       (current_square.y - 2 == new_square.y and current_square.x == new_square.x and move_count == 0)
     end
+    
+    current_square.board.clear_path?(current_square, new_square)
   end
 
   def tread?(current_square, new_square)
@@ -397,6 +401,7 @@ class Square
   end
 
   def move_piece(square)
+    puts "attempt to move #{x} #{y} to #{square.x} #{square.y}]"
     return unless board.team_turn == piece.team
     return unless (piece.valid_move?(self, square) && square.empty?) || piece.valid_kill?(self, square)
     return if board.will_this_move_lead_to_in_check_and_not_your_turn?(self, square)
@@ -483,9 +488,9 @@ class Rook < BasePiece
   end
 
   def valid_move?(current_square, new_square)
-    return unless current_square.board.clear_path?(current_square, new_square)
+     return unless current_square.x == new_square.x or current_square.y == new_square.y
 
-    current_square.x == new_square.x or current_square.y == new_square.y
+     current_square.board.clear_path?(current_square, new_square)
   end
 end
 
@@ -512,10 +517,10 @@ class Bishop < BasePiece
   end
 
   def valid_move?(current_square, new_square)
-    return unless current_square.board.clear_path?(current_square, new_square)
-
-    (current_square.x - new_square.x == current_square.y - new_square.y) or
+    return unless (current_square.x - new_square.x == current_square.y - new_square.y) or
     (current_square.x + current_square.y == new_square.x + new_square.y)
+
+    current_square.board.clear_path?(current_square, new_square)
   end
 end
 
@@ -525,10 +530,10 @@ class Queen < BasePiece
   end
 
   def valid_move?(current_square, new_square)
-    return unless current_square.board.clear_path?(current_square, new_square)
-
-    current_square.x == new_square.x or current_square.y == new_square.y or
+    return unless current_square.x == new_square.x or current_square.y == new_square.y or
     (current_square.x - new_square.x == current_square.y - new_square.y) or
     (current_square.x + current_square.y == new_square.x + new_square.y)
+
+    current_square.board.clear_path?(current_square, new_square)
   end
 end
