@@ -285,7 +285,9 @@ class King < BasePiece
     return false unless move_count == 0 && current_square.y == new_square.y && (current_square.x - new_square.x).abs == 2
     
     rook_square = current_square.board.rook_starting_square(current_square, new_square)
-    puts 
+    current_square.board.squares_between(current_square, rook_square).each do |square|
+      return false unless square.piece.nil?
+    end
     rook_square.piece.class == Rook && rook_square.piece.team == team && rook_square.piece.move_count == 0 
   end
 end
