@@ -105,7 +105,6 @@ class Board
   end
 
   def kill(x, y)
-    puts "kill #{x} , #{y}"
     square(x, y).piece = nil
   end
 
@@ -114,29 +113,35 @@ class Board
   end
 
   def clear_path?(current_square, new_square)
-    if(current_square.y == new_square.y)
-      (current_square.x.upto(new_square.x).drop(1).reverse.drop(1) + current_square.x.downto(new_square.x).drop(1).reverse.drop(1)).each do |x|
-        return false unless square(x, current_square.y).piece.nil?
-      end
-    elsif(current_square.x == new_square.x)
-      (current_square.y.upto(new_square.y).drop(1).reverse.drop(1) + current_square.y.downto(new_square.y).drop(1).reverse.drop(1)).each do |y|
-        return false unless square(current_square.x, y).piece.nil?
-      end
-    else
-      return true if (new_square.x - current_square.x).abs < 2
-      return true if (new_square.y - current_square.y).abs < 2
-      
-      x_step = new_square.x - current_square.x > 0 ? 1 : -1
-      y_step = new_square.y - current_square.y > 0 ? 1 : -1
-      puts "x_step y_step #{x_step} #{y_step}"
-      puts "current_square #{current_square.x} #{current_square.y}"
-      puts "current_square #{new_square.x} #{new_square.y}"
-      ((new_square.x - current_square.x).abs - 1).times do |step|
-        puts "square #{square(current_square.x + x_step * (step + 1), current_square.y + y_step * (step + 1))}"
-        return false if square(current_square.x + x_step * (step + 1), current_square.y + y_step * (step + 1)).piece
-      end
+    squares_between(current_square, new_square).each do |s|
+      return false unless s.piece.nil?
     end
     true
+  end
+
+  def squares_between(a, b)
+    if(a.y == b.y)
+      return (a.x.upto(b.x).drop(1).reverse.drop(1) + a.x.downto(b.x).drop(1).reverse.drop(1)).map do |x|
+        square(x, a.y)
+      end
+    elsif(a.x == b.x)
+      return (a.y.upto(b.y).drop(1).reverse.drop(1) + a.y.downto(b.y).drop(1).reverse.drop(1)).map do |y|
+        square(a.x, y)
+      end
+    else
+      return [] if (b.x - a.x).abs < 2
+      return [] if (b.y - a.y).abs < 2
+      
+      x_step = b.x - a.x > 0 ? 1 : -1
+      y_step = b.y - a.y > 0 ? 1 : -1
+      squares = []
+      ((b.x - a.x).abs - 1).times do |step|
+
+        squares[step] = square(a.x + x_step * (step + 1), a.y + y_step * (step + 1))
+      end
+      return squares
+    end
+    []
   end
 
   def moving_into_check?(current_square, new_square)
@@ -194,7 +199,6 @@ class Board
 
   private 
   def square(x, y)
-    puts "x y #{x} #{y}"
     squares[SIZE_X * y + x]
   end
 
@@ -281,6 +285,7 @@ class King < BasePiece
     return false unless move_count == 0 && current_square.y == new_square.y && (current_square.x - new_square.x).abs == 2
     
     rook_square = current_square.board.rook_starting_square(current_square, new_square)
+    puts 
     rook_square.piece.class == Rook && rook_square.piece.team == team && rook_square.piece.move_count == 0 
   end
 end
@@ -421,7 +426,6 @@ class Square
   end
 
   def move_piece(square)
-    puts "attempt to move #{x} #{y} to #{square.x} #{square.y}]"
     return unless board.team_turn == piece.team
     return unless (piece.valid_move?(self, square) && square.empty?) || piece.valid_kill?(self, square)
     return if board.will_this_move_lead_to_in_check_and_not_your_turn?(self, square)
