@@ -181,9 +181,7 @@ class Board
   def in_check?(team)
     enemy_squares = squares.select{|s| s.piece && s.piece.team != (team)}
     enemy_squares.each do |enemy_square|
-      if enemy_square.piece.tread?(enemy_square, king_square(team))        
-        return true
-      end
+      return true if enemy_square.piece.tread?(enemy_square, king_square(team))   
     end
     
     false
@@ -195,15 +193,6 @@ class Board
     else
       current_square.board.square(0, current_square.y)
     end
-  end
-
-  private 
-  def square(x, y)
-    squares[SIZE_X * y + x]
-  end
-
-  def king_square(team)
-    squares.select{|s| s.piece && s.piece.team == team && s.piece.class == King}.first
   end
 
   def will_this_move_lead_to_in_check_and_not_your_turn?(current_square, new_square)
@@ -223,6 +212,15 @@ class Board
     end
     
     false
+  end
+
+  private 
+  def square(x, y)
+    squares[SIZE_X * y + x]
+  end
+
+  def king_square(team)
+    squares.select{|s| s.piece && s.piece.team == team && s.piece.class == King}.first
   end
 end
 
@@ -288,6 +286,10 @@ class King < BasePiece
     current_square.board.squares_between(current_square, rook_square).each do |square|
       return false unless square.piece.nil?
     end
+    ([current_square , rook_square] + current_square.board.squares_between(current_square, rook_square)).each do |square|
+      return false if square.board.will_this_move_lead_to_in_check_and_not_your_turn?(current_square, square)
+    end
+
     rook_square.piece.class == Rook && rook_square.piece.team == team && rook_square.piece.move_count == 0 
   end
 end
@@ -466,7 +468,7 @@ class Square
     square.piece.move_count += 1 
     board.turn += 1
 
-    @piece = nil
+    @piece = nil unless move.start_x == move.end_x && move.start_y == move.end_y # this only happen when we force a move to the same square
     true
   end
 
